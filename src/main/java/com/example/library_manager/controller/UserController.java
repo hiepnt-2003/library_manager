@@ -31,6 +31,12 @@ public class UserController {
         return userService.getUserById(id);
     }
 
+    @GetMapping("/username/{username}")
+    public String checkUsernameExists(@PathVariable String username) {
+        boolean exists = !userService.getUserByUsername(username).isEmpty();
+        return exists ? "EXISTS" : "AVAILABLE";
+    }
+
     @PostMapping
     public User addUser(@RequestBody User user) {
         return userService.addUser(user);

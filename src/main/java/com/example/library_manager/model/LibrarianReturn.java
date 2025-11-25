@@ -7,12 +7,32 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "tblLibrarianReturn")
+@Table(name = "LibrarianReturn")
 public class LibrarianReturn {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
+    
     private Integer librarianId;
     private Integer reservationId;
-    // getters and setters
+    
+    // Constructors
+    public LibrarianReturn() {
+    }
+    
+    public LibrarianReturn(Integer librarianId, Integer reservationId) {
+        this.librarianId = librarianId;
+        this.reservationId = reservationId;
+    }
+    
+    // Getters and Setters
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+    
+    public Integer getLibrarianId() { return librarianId; }
+    public void setLibrarianId(Integer librarianId) { this.librarianId = librarianId; }
+    
+    public Integer getReservationId() { return reservationId; }
+    public void setReservationId(Integer reservationId) { this.reservationId = reservationId; }
 }

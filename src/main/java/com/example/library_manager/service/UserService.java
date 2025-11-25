@@ -23,6 +23,10 @@ public class UserService {
         return userRepository.findById(id);
     }
 
+    public List<User> getUserByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
     public User addUser(User user) {
         user.setIsActive(1);
         user.setUserType(UserType.READER);

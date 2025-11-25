@@ -7,5 +7,5 @@ import com.example.library_manager.model.User;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Integer> {
-    // Custom query methods if needed
+    java.util.List<User> findByUsername(String username);
 }
