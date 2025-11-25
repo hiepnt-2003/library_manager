@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setupSearchListener();
     setupFormValidation();
     setupUsernameCheck();
+});
+
 // Kiểm tra username tồn tại
 function setupUsernameCheck() {
     const usernameInput = document.getElementById('username');
@@ -53,7 +55,6 @@ function setupUsernameCheck() {
         }
     });
 }
-});
 
 // Load all readers from API
 async function loadReaders() {
@@ -108,6 +109,11 @@ function displayReaders(readers) {
                     <button class="btn btn-sm btn-warning btn-action" onclick="editReader(${reader.id})" title="Chỉnh sửa">
                         <i class="bi bi-pencil"></i>
                     </button>
+                    ${reader.isActive === 1 ? `
+                    <button class="btn btn-sm btn-danger btn-action" onclick="disableReader(${reader.id})" title="Vô hiệu hóa">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                    ` : ''}
                 </div>
             </td>
         </tr>
@@ -119,7 +125,7 @@ function showLoading() {
     const tbody = document.getElementById('readersTableBody');
     tbody.innerHTML = `
         <tr>
-            <td colspan="6" class="text-center">
+            <td colspan="8" class="text-center">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
@@ -134,7 +140,7 @@ function showEmptyState() {
     const tbody = document.getElementById('readersTableBody');
     tbody.innerHTML = `
         <tr>
-            <td colspan="6">
+            <td colspan="8">
                 <div class="empty-state">
                     <i class="bi bi-inbox"></i>
                     <h4>Chưa có độc giả nào</h4>
@@ -205,10 +211,14 @@ function openAddModal() {
     document.getElementById('readerForm').reset();
     document.getElementById('readerId').value = '';
     
-    // Set default dates
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('dateJoined').value = today;
+    // Hiện lại trường username khi thêm mới
+    const usernameGroup = document.getElementById('username').closest('.mb-3');
+    if (usernameGroup) {
+        usernameGroup.style.display = 'block';
+    }
+    document.getElementById('usernameCheckResult').textContent = '';
     
+    // Set default dates
     const oneYearLater = new Date();
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
     document.getElementById('membershipExpiryDate').value = oneYearLater.toISOString().split('T')[0];
@@ -244,7 +254,7 @@ async function viewReader(id) {
             </div>
             <div class="detail-row">
                 <span class="detail-label"><i class="bi bi-check-circle"></i> Trạng thái:</span>
-                <span class="detail-value">${reader.isActive === 1 ? 'Hoạt động' : 'Không hoạt động'}</span>
+                <span class="detail-value">${reader.isActive === 1 ? '<span class="badge bg-success">Hoạt động</span>' : '<span class="badge bg-danger">Không hoạt động</span>'}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label"><i class="bi bi-person-circle"></i> User ID:</span>
@@ -253,10 +263,6 @@ async function viewReader(id) {
             <div class="detail-row">
                 <span class="detail-label"><i class="bi bi-person-badge"></i> Username:</span>
                 <span class="detail-value">${reader.username || 'N/A'}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label"><i class="bi bi-key"></i> Password:</span>
-                <span class="detail-value">${reader.password || 'N/A'}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label"><i class="bi bi-calendar-plus"></i> Ngày tham gia:</span>
@@ -295,16 +301,22 @@ async function editReader(id) {
         
         document.getElementById('modalTitle').textContent = 'Chỉnh sửa Độc giả';
         document.getElementById('readerId').value = currentReader.id;
-        document.getElementById('libraryCardNumber').value = currentReader.libraryCardNumber || '';
-        document.getElementById('userId').value = currentReader.userId || '';
         
-        if (currentReader.dateJoined) {
-            document.getElementById('dateJoined').value = new Date(currentReader.dateJoined).toISOString().split('T')[0];
-        }
+        // Chỉ set các trường có thể chỉnh sửa
+        document.getElementById('password').value = currentReader.password || '';
+        document.getElementById('fullName').value = currentReader.fullName || '';
+        document.getElementById('phone').value = currentReader.phone || '';
         
         if (currentReader.membershipExpiryDate) {
             document.getElementById('membershipExpiryDate').value = new Date(currentReader.membershipExpiryDate).toISOString().split('T')[0];
         }
+        
+        // Ẩn trường username khi edit
+        const usernameGroup = document.getElementById('username').closest('.mb-3');
+        if (usernameGroup) {
+            usernameGroup.style.display = 'none';
+        }
+        document.getElementById('usernameCheckResult').textContent = '';
         
         const modal = new bootstrap.Modal(document.getElementById('readerModal'));
         modal.show();
@@ -312,6 +324,41 @@ async function editReader(id) {
     } catch (error) {
         console.error('Error editing reader:', error);
         showAlert('Lỗi khi tải thông tin độc giả: ' + error.message, 'danger');
+    }
+}
+
+// Disable reader
+async function disableReader(id) {
+    if (!confirm('Bạn có chắc chắn muốn vô hiệu hóa độc giả này?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${READERS_API}/${id}`);
+        if (!response.ok) {
+            throw new Error('Không thể tải thông tin độc giả');
+        }
+        
+        const reader = await response.json();
+        reader.isActive = 0;
+        
+        const disableResponse = await fetch(`${API_BASE_URL}/users/disable/${reader.userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!disableResponse.ok) {
+            throw new Error('Không thể vô hiệu hóa độc giả');
+        }
+        
+        showAlert('Vô hiệu hóa độc giả thành công!', 'success');
+        loadReaders();
+        
+    } catch (error) {
+        console.error('Error disabling reader:', error);
+        showAlert('Lỗi khi vô hiệu hóa độc giả: ' + error.message, 'danger');
     }
 }
 
@@ -326,23 +373,39 @@ async function saveReader() {
     
     const readerId = document.getElementById('readerId').value;
     const readerData = {
-        username: document.getElementById('username').value.trim(),
         password: document.getElementById('password').value,
         fullName: document.getElementById('fullName').value.trim(),
         phone: document.getElementById('phone').value.trim(),
         membershipExpiryDate: document.getElementById('membershipExpiryDate').value
     };
 
-    // Validation
-    if (!readerData.username || !readerData.password || !readerData.fullName || !readerData.phone || !readerData.membershipExpiryDate) {
-        showAlert('Vui lòng điền đầy đủ thông tin bắt buộc', 'warning');
-        return;
+    // Nếu là thêm mới thì cần username
+    if (!readerId) {
+        readerData.username = document.getElementById('username').value.trim();
+        
+        if (!readerData.username) {
+            showAlert('Vui lòng nhập tên đăng nhập', 'warning');
+            return;
+        }
+        
+        // Kiểm tra username trước khi gửi
+        const usernameCheckResult = document.getElementById('usernameCheckResult');
+        if (usernameCheckResult && usernameCheckResult.textContent.includes('đã tồn tại')) {
+            showAlert('Tên đăng nhập đã tồn tại, vui lòng chọn tên khác!', 'danger');
+            return;
+        }
+    } else {
+        // Nếu là update, cần lấy thêm các thông tin từ currentReader
+        readerData.id = parseInt(readerId);
+        readerData.userId = currentReader.userId;
+        readerData.libraryCardNumber = currentReader.libraryCardNumber;
+        readerData.dateJoined = currentReader.dateJoined;
+        readerData.isActive = currentReader.isActive;
     }
 
-    // Kiểm tra username trước khi gửi
-    const usernameCheckResult = document.getElementById('usernameCheckResult');
-    if (usernameCheckResult && usernameCheckResult.textContent.includes('đã tồn tại')) {
-        showAlert('Tên đăng nhập đã tồn tại, vui lòng chọn tên khác!', 'danger');
+    // Validation
+    if (!readerData.password || !readerData.fullName || !readerData.phone || !readerData.membershipExpiryDate) {
+        showAlert('Vui lòng điền đầy đủ thông tin bắt buộc', 'warning');
         return;
     }
     
@@ -351,7 +414,6 @@ async function saveReader() {
         
         if (readerId) {
             // Update existing reader
-            readerData.id = parseInt(readerId);
             response = await fetch(`${READERS_API}/${readerId}`, {
                 method: 'PUT',
                 headers: {
@@ -371,7 +433,8 @@ async function saveReader() {
         }
         
         if (!response.ok) {
-            throw new Error('Không thể lưu thông tin độc giả');
+            const errorText = await response.text();
+            throw new Error(errorText || 'Không thể lưu thông tin độc giả');
         }
         
         const savedReader = await response.json();
@@ -414,7 +477,9 @@ function setupSearchListener() {
         const filteredReaders = allReaders.filter(reader => {
             return (
                 (reader.libraryCardNumber && reader.libraryCardNumber.toLowerCase().includes(searchTerm)) ||
-                (reader.userId && reader.userId.toString().includes(searchTerm)) ||
+                (reader.fullName && reader.fullName.toLowerCase().includes(searchTerm)) ||
+                (reader.phone && reader.phone.includes(searchTerm)) ||
+                (reader.username && reader.username.toLowerCase().includes(searchTerm)) ||
                 (reader.id && reader.id.toString().includes(searchTerm))
             );
         });
@@ -432,15 +497,18 @@ function setupFormValidation() {
         saveReader();
     });
     
-    // Validate expiry date is after join date
-    const dateJoined = document.getElementById('dateJoined');
+    // Validate expiry date is in the future
     const expiryDate = document.getElementById('membershipExpiryDate');
     
     expiryDate.addEventListener('change', function() {
-        if (dateJoined.value && expiryDate.value) {
-            if (new Date(expiryDate.value) <= new Date(dateJoined.value)) {
-                expiryDate.setCustomValidity('Ngày hết hạn phải sau ngày tham gia');
-                showAlert('Ngày hết hạn phải sau ngày tham gia', 'warning');
+        if (expiryDate.value) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const selectedDate = new Date(expiryDate.value);
+            
+            if (selectedDate < today) {
+                expiryDate.setCustomValidity('Ngày hết hạn phải là ngày trong tương lai');
+                showAlert('Ngày hết hạn phải là ngày trong tương lai', 'warning');
             } else {
                 expiryDate.setCustomValidity('');
             }
@@ -491,3 +559,4 @@ window.openAddModal = openAddModal;
 window.viewReader = viewReader;
 window.editReader = editReader;
 window.saveReader = saveReader;
+window.disableReader = disableReader;

@@ -11,6 +11,8 @@ import com.example.library_manager.model.User;
 import com.example.library_manager.repository.ReaderRepository;
 import com.example.library_manager.repository.UserRepository;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class ReaderService {
     @Autowired
@@ -65,9 +67,11 @@ public class ReaderService {
         return Optional.ofNullable(reader);
     }
 
+
+    @Transactional
     public Reader addReader(Reader reader) {
-        Optional<User> userOpt = userRepository.findByUsername(reader.getUsername());
-        if (userOpt.isPresent()) {
+        List<User> users = userRepository.findByUsername(reader.getUsername());
+        if (!users.isEmpty()) {
             throw new IllegalArgumentException("Username đã tồn tại");
         }
         // Tạo mới user trước
@@ -85,13 +89,35 @@ public class ReaderService {
         return savedReader;
     }
 
+    @Transactional
     public Reader updateReader(Reader reader) {
-        Reader savedReader = readerRepository.save(reader);
-        Optional<User> userOpt = userRepository.findById(savedReader.getUserId());
+        // Lấy reader hiện tại từ database
+        Reader existingReader = readerRepository.findById(reader.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Reader không tồn tại"));
+        
+        // Cập nhật Reader table
+        existingReader.setMembershipExpiryDate(reader.getMembershipExpiryDate());
+        Reader savedReader = readerRepository.save(existingReader);
+        
+        // Cập nhật User table
+        Optional<User> userOpt = userRepository.findById(existingReader.getUserId());
         userOpt.ifPresent(user -> {
-            user.setIsActive(savedReader.getIsActive());
+            // Cập nhật các trường từ transient fields của reader
+            if (reader.getPassword() != null && !reader.getPassword().isEmpty()) {
+                user.setPassword(reader.getPassword());
+            }
+            if (reader.getFullName() != null && !reader.getFullName().isEmpty()) {
+                user.setFullName(reader.getFullName());
+            }
+            if (reader.getPhone() != null && !reader.getPhone().isEmpty()) {
+                user.setPhone(reader.getPhone());
+            }
+            if (reader.getIsActive() != null) {
+                user.setIsActive(reader.getIsActive());
+            }
             userRepository.save(user);
         });
+        
         return savedReader;
     }
 }
