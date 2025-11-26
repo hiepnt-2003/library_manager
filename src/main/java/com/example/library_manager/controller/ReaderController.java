@@ -19,7 +19,7 @@ import com.example.library_manager.model.Reader;
 import com.example.library_manager.service.ReaderService;
 
 @RestController
-@RequestMapping("/readers")
+@RequestMapping("/api/readers")
 public class ReaderController {
     @Autowired
     private ReaderService readerService;

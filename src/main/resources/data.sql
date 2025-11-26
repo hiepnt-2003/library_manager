@@ -175,8 +175,8 @@ INSERT INTO Reservation (readerId, librarianApprovedId, librarianGiveId, librari
 (8, 1, 1, NULL, '2024-10-20', '2024-10-21', '2024-11-04', '2024-10-20', 'OVERDUE'),
 
 -- Đang chờ duyệt
-(9, NULL, NULL, NULL, '2024-11-23', NULL, NULL, NULL, 'PENDING'),
-(10, NULL, NULL, NULL, '2024-11-24', NULL, NULL, NULL, 'PENDING'),
+(9, NULL, NULL, NULL, '2024-11-23', NULL, '2025-12-04', NULL, 'PENDING'),
+(10, NULL, NULL, NULL, '2024-11-24', NULL, '2025-12-04', NULL, 'PENDING'),
 
 -- Đã duyệt, chờ lấy sách
 (1, 1, NULL, NULL, '2024-11-22', NULL, NULL, '2024-11-22', 'APPROVED'),

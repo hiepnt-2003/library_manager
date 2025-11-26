@@ -16,7 +16,7 @@ import com.example.library_manager.model.User;
 import com.example.library_manager.service.UserService;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 public class UserController {
     @Autowired
     private UserService userService;

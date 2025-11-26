@@ -1,6 +1,7 @@
 package com.example.library_manager.model;
 
 import java.util.Date;
+import java.util.List;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
+import jakarta.persistence.Transient;
 
 import com.example.library_manager.model.enums.ReservationStatus;
 
@@ -42,6 +44,12 @@ public class Reservation {
     @Enumerated(EnumType.STRING)
     private ReservationStatus status;
     
+    @Transient
+    private List<ReservationItem> reservationItems;
+
+    @Transient
+    private Reader reader;
+
     // Constructors
     public Reservation() {
     }
@@ -82,4 +90,10 @@ public class Reservation {
     
     public ReservationStatus getStatus() { return status; }
     public void setStatus(ReservationStatus status) { this.status = status; }
+
+    public List<ReservationItem> getReservationItems() { return reservationItems; }
+    public void setReservationItems(List<ReservationItem> reservationItems) { this.reservationItems = reservationItems; }
+
+    public Reader getReader() { return reader; }
+    public void setReader(Reader reader) { this.reader = reader; }
 }

@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
+import jakarta.persistence.Transient;
 
 import com.example.library_manager.model.enums.PayFineStatus;
 import com.example.library_manager.model.enums.ReservationItemStatus;
@@ -19,6 +20,9 @@ import com.example.library_manager.model.enums.ReservationItemStatus;
 @Table(name = "ReservationItem")
 public class ReservationItem {
     
+    @Transient
+    private Book book;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -70,4 +74,7 @@ public class ReservationItem {
     
     public ReservationItemStatus getStatus() { return status; }
     public void setStatus(ReservationItemStatus status) { this.status = status; }
+
+    public Book getBook() { return book; }
+    public void setBook(Book book) { this.book = book; }
 }

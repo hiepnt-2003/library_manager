@@ -1,6 +1,6 @@
 // API Configuration
 const API_BASE_URL = 'http://localhost:8080';
-const READERS_API = `${API_BASE_URL}/readers`;
+const READERS_API = `${API_BASE_URL}/api/readers`;
 
 // Global Variables
 let allReaders = [];
