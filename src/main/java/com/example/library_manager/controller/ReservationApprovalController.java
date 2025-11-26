@@ -81,13 +81,68 @@ public class ReservationApprovalController {
     }
     
     /**
-     * LẤY DANH SÁCH PHIẾU MƯỢN CHỜ DUYỆT
-     * GET /api/reservations/pending
+     * LẤY PHIẾU MƯỢN THEO TRẠNG THÁI
+     * GET /api/reservations/{status}
+     * 
+     * @param status - PENDING, APPROVED, REJECTED, EXPIRED, BORROWED, OVERDUE, RETURNED, COMPLETED
+     * 
+     * Ví dụ:
+     * - GET /api/reservations/pending  → Lấy phiếu chờ duyệt (kiểm tra reader valid)
+     * - GET /api/reservations/approved → Lấy phiếu đã duyệt (không kiểm tra reader)
+     * - GET /api/reservations/rejected → Lấy phiếu đã từ chối
+     */
+    @GetMapping("/{status}")
+    public ResponseEntity<?> getReservationsByStatus(@PathVariable String status) {
+        try {
+            // Convert string to uppercase to match enum
+            String statusUpper = status.toUpperCase();
+            
+            // Validate status
+            try {
+                com.example.library_manager.model.enums.ReservationStatus.valueOf(statusUpper);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Trạng thái không hợp lệ: " + status));
+            }
+            
+            List<Reservation> reservations = reservationApprovalService.getReservationsByStatus(statusUpper);
+            return ResponseEntity.ok(reservations);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+    
+    /**
+     * LẤY TẤT CẢ PHIẾU MƯỢN (CHỜ DUYỆT, ĐÃ DUYỆT, ĐÃ TỪ CHỐI)
+     * GET /api/reservations/all
+     * 
+     * Tự động kiểm tra và hủy các phiếu APPROVED quá 3 ngày
+     * Trả về tất cả phiếu PENDING, APPROVED, REJECTED
+     */
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllReservations() {
+        try {
+            List<Reservation> allReservations = reservationApprovalService.getAllReservations();
+            return ResponseEntity.ok(allReservations);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+    
+    /**
+     * LẤY DANH SÁCH PHIẾU MƯỢN CHỜ DUYỆT (Legacy - dùng GET /pending thay thế)
+     * GET /api/reservations/pending-list
      * 
      * Tự động kiểm tra và hủy các phiếu APPROVED quá 3 ngày
      * Chỉ trả về các phiếu PENDING (không bao gồm phiếu đã quá hạn)
+     * Kiểm tra reader valid
+     * 
+     * @deprecated Sử dụng GET /api/reservations/pending thay thế
      */
-    @GetMapping("/pending")
+    @GetMapping("/pending-list")
     public ResponseEntity<?> getPendingReservations() {
         try {
             List<Reservation> pendingReservations = reservationApprovalService.getPendingReservations();
@@ -100,9 +155,9 @@ public class ReservationApprovalController {
     
     /**
      * LẤY CHI TIẾT PHIẾU MƯỢN
-     * GET /api/reservations/{id}
+     * GET /api/reservations/detail/{id}
      */
-    @GetMapping("/{id}")
+    @GetMapping("/detail/{id}")
     public ResponseEntity<?> getReservationDetails(@PathVariable Integer id) {
         try {
             Reservation reservation = reservationApprovalService.getReservationDetails(id);

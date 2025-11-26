@@ -1,6 +1,7 @@
 package com.example.library_manager.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -47,7 +48,7 @@ public class ReservationApprovalService {
 
     // DUYỆT YÊU CẦU MƯỢN SÁCH
     @Transactional
-    public Reservation approveReservation(Integer reservationId, Integer librarianId, Boolean approved,String rejectReason) {
+    public Reservation approveReservation(Integer reservationId, Integer librarianId, Boolean approved, String rejectReason) {
 
         // LẤY THÔNG TIN PHIẾU MƯỢN
         Reservation reservation = reservationRepository.findById(reservationId)
@@ -133,31 +134,45 @@ public class ReservationApprovalService {
         return savedReservation;
     }
 
-    // LẤY DANH SÁCH PHIẾU MƯỢN CHỜ DUYỆT
+    // LẤY PHIẾU MƯỢN THEO TRẠNG THÁI (MAIN METHOD)
     @Transactional
-    public List<Reservation> getPendingReservations() {
-        // Tự động hủy các phiếu APPROVED quá 3 ngày
-        expireOldApprovedReservations();
+    public List<Reservation> getReservationsByStatus(String statusString) {
+        // Tự động hủy các phiếu PENDING quá 3 ngày
+        expirePendingReservations();
 
-        // Sau đó lấy danh sách PENDING
-        List<Reservation> pendingReservations = reservationRepository.findByStatus(ReservationStatus.PENDING);
-        // List<Reservation> pendingReservations = reservationRepository.findAll();
+        // Convert string to enum
+        ReservationStatus status = ReservationStatus.valueOf(statusString);
 
-        List<Reservation> resultPendReservations = new ArrayList<>();
+        // Lấy danh sách phiếu theo status
+        List<Reservation> reservations = reservationRepository.findByStatus(status);
+
+        List<Reservation> resultReservations = new ArrayList<>();
+
         // Kiểm tra và gán thông tin cho từng phiếu mượn
-        for (Reservation reservation : pendingReservations) {
+        for (Reservation reservation : reservations) {
+            // Lấy items
             List<ReservationItem> items = reservationItemRepository.findByReservationId(reservation.getId());
 
             // Độc giả
             Reader reader = readerRepository.findById(reservation.getReaderId()).orElse(null);
-            if (!isValidReader(reader)) {
-                continue;// Nếu độc giả không hợp lệ thì bỏ qua phiếu mượn này
+            
+            // CHỈ KIỂM TRA VALID READER KHI STATUS LÀ PENDING
+            if (status == ReservationStatus.PENDING) {
+                if (!isValidReader(reader)) {
+                    continue; // Bỏ qua phiếu này nếu reader không valid
+                }
             }
-            User user = userRepository.findById(reader.getUserId()).orElse(null);
-            reader.setUsername(user.getUsername());
-            reader.setFullName(user.getFullName());
-            reader.setPhone(user.getPhone());
-            reservation.setReader(reader);
+            
+            // Gán thông tin reader (không quan tâm valid hay không cho các status khác)
+            if (reader != null) {
+                User user = userRepository.findById(reader.getUserId()).orElse(null);
+                if (user != null) {
+                    reader.setUsername(user.getUsername());
+                    reader.setFullName(user.getFullName());
+                    reader.setPhone(user.getPhone());
+                }
+                reservation.setReader(reader);
+            }
 
             // Sách
             for (ReservationItem item : items) {
@@ -165,19 +180,49 @@ public class ReservationApprovalService {
                 item.setBook(book);
             }
             reservation.setReservationItems(items);
-            resultPendReservations.add(reservation);
+            resultReservations.add(reservation);
         }
-        return resultPendReservations;
+
+        return resultReservations;
     }
 
-    // TỰ ĐỘNG HỦY CÁC PHIẾU MƯỢN QUÁ HẠN (ĐÃ DUYỆT NHƯNG QUÁ 3 NGÀY CHƯA LẤY SÁCH)
+    // LẤY TẤT CẢ PHIẾU MƯỢN (PENDING, APPROVED, REJECTED)
     @Transactional
-    public int expireOldApprovedReservations() {
+    public List<Reservation> getAllReservations() {
+        // Tự động hủy các phiếu PENDING quá 3 ngày
+        expirePendingReservations();
+
+        // Lấy tất cả phiếu PENDING, APPROVED, REJECTED
+        List<ReservationStatus> statuses = Arrays.asList(
+            ReservationStatus.PENDING, 
+            ReservationStatus.APPROVED, 
+            ReservationStatus.REJECTED
+        );
+        
+        List<Reservation> allReservations = new ArrayList<>();
+        for (ReservationStatus status : statuses) {
+            allReservations.addAll(getReservationsByStatus(status.name()));
+        }
+        
+        return allReservations;
+    }
+
+    // LẤY DANH SÁCH PHIẾU MƯỢN CHỜ DUYỆT (Legacy method - giữ lại để tương thích)
+    @Transactional
+    public List<Reservation> getPendingReservations() {
+        return getReservationsByStatus("PENDING");
+    }
+
+    // TỰ ĐỘNG HỦY CÁC PHIẾU MƯỢN QUÁ HẠN (CHỈ PENDING QUÁ 3 NGÀY)
+    @Transactional
+    public int expirePendingReservations() {
         Calendar calendar = Calendar.getInstance();
         calendar.add(Calendar.DAY_OF_MONTH, -3);
         Date thresholdDate = calendar.getTime();
 
-        List<Reservation> expiredReservations = reservationRepository.findExpiredApprovedReservations(thresholdDate);
+        // CHỈ LẤY CÁC PHIẾU PENDING CÓ requestDate < 3 ngày trước
+        List<Reservation> expiredReservations = reservationRepository
+            .findPendingExpiredReservations(thresholdDate);
 
         for (Reservation reservation : expiredReservations) {
             reservation.setStatus(ReservationStatus.EXPIRED);
@@ -195,9 +240,10 @@ public class ReservationApprovalService {
     }
 
     // LẤY CHI TIẾT PHIẾU MƯỢN
+    @Transactional
     public Reservation getReservationDetails(Integer reservationId) {
-        // Tự động hủy các phiếu APPROVED quá 3 ngày
-        expireOldApprovedReservations();
+        // Tự động hủy các phiếu PENDING quá 3 ngày
+        expirePendingReservations();
 
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu mượn với ID: " + reservationId));
@@ -205,16 +251,17 @@ public class ReservationApprovalService {
         // Kiểm tra và gán thông tin cho phiếu mượn
         List<ReservationItem> items = reservationItemRepository.findByReservationId(reservation.getId());
 
-        // Độc giả
+        // Độc giả - KHÔNG KIỂM TRA VALID
         Reader reader = readerRepository.findById(reservation.getReaderId()).orElse(null);
-        if (!isValidReader(reader)) {
-            return null;// Nếu độc giả không hợp lệ thì bỏ qua phiếu mượn này
+        if (reader != null) {
+            User user = userRepository.findById(reader.getUserId()).orElse(null);
+            if (user != null) {
+                reader.setUsername(user.getUsername());
+                reader.setFullName(user.getFullName());
+                reader.setPhone(user.getPhone());
+            }
+            reservation.setReader(reader);
         }
-        User user = userRepository.findById(reader.getUserId()).orElse(null);
-        reader.setUsername(user.getUsername());
-        reader.setFullName(user.getFullName());
-        reader.setPhone(user.getPhone());
-        reservation.setReader(reader);
 
         // Sách
         for (ReservationItem item : items) {
@@ -231,17 +278,15 @@ public class ReservationApprovalService {
         return reservationItemRepository.findByReservationId(reservationId);
     }
 
-    // Valid Người dùng
+    // KIỂM TRA NGƯỜI DÙNG HỢP LỆ
     public boolean isValidReader(Reader reader) {
         if (reader == null) {
             return false;
         }
+        
         // Kiểm tra User của Reader
-        User user = userRepository.findById(reader.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Không tìm thấy thông tin người dùng với ID: " + reader.getUserId()));
-
-        if (user.getIsActive() != 1) {
+        User user = userRepository.findById(reader.getUserId()).orElse(null);
+        if (user == null || user.getIsActive() != 1) {
             return false;
         }
 
@@ -250,6 +295,7 @@ public class ReservationApprovalService {
         if (reader.getMembershipExpiryDate() != null && reader.getMembershipExpiryDate().before(today)) {
             return false;
         }
+        
         return true;
     }
 }

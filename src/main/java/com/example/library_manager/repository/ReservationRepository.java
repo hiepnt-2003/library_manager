@@ -22,7 +22,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, Intege
     // Lấy phiếu mượn theo trạng thái của một độc giả
     List<Reservation> findByReaderIdAndStatus(Integer readerId, ReservationStatus status);
     
-    // Lấy các phiếu mượn quá hạn duyệt (approved sau 3 ngày chưa lấy sách)
+    // LẤY CÁC PHIẾU PENDING QUÁ HẠN (requestDate quá 3 ngày)
+    @Query("SELECT r FROM Reservation r WHERE r.status = 'PENDING' AND r.requestDate < :thresholdDate")
+    List<Reservation> findPendingExpiredReservations(@Param("thresholdDate") Date thresholdDate);
+    
+    // LẤY CÁC PHIẾU APPROVED QUÁ HẠN (approvalDate quá 3 ngày) - GIỮ LẠI ĐỂ TƯƠNG THÍCH
     @Query("SELECT r FROM Reservation r WHERE r.status = 'APPROVED' AND r.approvalDate < :thresholdDate")
     List<Reservation> findExpiredApprovedReservations(@Param("thresholdDate") Date thresholdDate);
     
