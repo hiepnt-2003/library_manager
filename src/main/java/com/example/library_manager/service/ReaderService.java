@@ -18,13 +18,14 @@ public class ReaderService {
     @Autowired
     private ReaderRepository readerRepository;
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
+    // Lấy danh sách tất cả độc giả
     public List<Reader> getAllReaders() {
         List<Reader> readers = readerRepository.findAll();
 
         for (Reader reader : readers) {
-            Optional<User> userOpt = userRepository.findById(reader.getUserId());
+            Optional<User> userOpt = userService.getUserById(reader.getUserId());
             userOpt.ifPresent(user -> {
                 reader.setUsername(user.getUsername());
                 reader.setPassword(user.getPassword());
@@ -36,18 +37,18 @@ public class ReaderService {
                 if (reader.getMembershipExpiryDate() != null
                         && reader.getMembershipExpiryDate().before(new java.util.Date())) {
                     reader.setIsActive(0);
-                    user.setIsActive(0);
-                    userRepository.save(user);
+                    userService.disableUser(user.getId());
                 }
             });
         }
         return readers;
     }
 
+    // Lấy độc giả theo ID
     public Optional<Reader> getReaderById(Integer id) {
         Reader reader = readerRepository.findById(id).orElse(null);
         if (reader != null) {
-            Optional<User> userOpt = userRepository.findById(reader.getUserId());
+            Optional<User> userOpt = userService.getUserById(reader.getUserId());
             userOpt.ifPresent(user -> {
                 reader.setUsername(user.getUsername());
                 reader.setPassword(user.getPassword());
@@ -59,8 +60,7 @@ public class ReaderService {
                 if (reader.getMembershipExpiryDate() != null
                         && reader.getMembershipExpiryDate().before(new java.util.Date())) {
                     reader.setIsActive(0);
-                    user.setIsActive(0);
-                    userRepository.save(user);
+                    userService.disableUser(user.getId());
                 }
             });
         }
@@ -68,19 +68,23 @@ public class ReaderService {
     }
 
 
+    // Kiểm tra username đã tồn tại chưa
+    public boolean isUsernameExists(String username) {
+        List<User> users = userService.getUserByUsername(username);
+        return !users.isEmpty();
+    }
+
+    // Thêm độc giả mới
     @Transactional
     public Reader addReader(Reader reader) {
-        List<User> users = userRepository.findByUsername(reader.getUsername());
-        if (!users.isEmpty()) {
-            throw new IllegalArgumentException("Username đã tồn tại");
-        }
         // Tạo mới user trước
-        User user = new User(reader.getUsername(),
+        User user = new User(
+                reader.getUsername(),
                 reader.getPassword(),
                 reader.getFullName(),
                 reader.getPhone(),
                 com.example.library_manager.model.enums.UserType.READER);
-        User savedUser = userRepository.save(user);
+        User savedUser = userService.addUser(user);
 
         // Gán userId cho reader rồi lưu reader
         reader.setUserId(savedUser.getId());
@@ -89,18 +93,19 @@ public class ReaderService {
         return savedReader;
     }
 
+    // Cập nhật thông tin độc giả
     @Transactional
     public Reader updateReader(Reader reader) {
         // Lấy reader hiện tại từ database
         Reader existingReader = readerRepository.findById(reader.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Reader không tồn tại"));
         
-        // Cập nhật Reader table
+        // Cập nhật Reader
         existingReader.setMembershipExpiryDate(reader.getMembershipExpiryDate());
         Reader savedReader = readerRepository.save(existingReader);
         
-        // Cập nhật User table
-        Optional<User> userOpt = userRepository.findById(existingReader.getUserId());
+        // Cập nhật User
+        Optional<User> userOpt = userService.getUserById(existingReader.getUserId());
         userOpt.ifPresent(user -> {
             // Cập nhật các trường từ transient fields của reader
             if (reader.getPassword() != null && !reader.getPassword().isEmpty()) {
@@ -115,7 +120,7 @@ public class ReaderService {
             if (reader.getIsActive() != null) {
                 user.setIsActive(reader.getIsActive());
             }
-            userRepository.save(user);
+            userService.updateUser(user);
         });
         
         return savedReader;
