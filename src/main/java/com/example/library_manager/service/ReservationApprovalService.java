@@ -1,7 +1,6 @@
 package com.example.library_manager.service;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -18,30 +17,25 @@ import com.example.library_manager.model.ReservationItem;
 import com.example.library_manager.model.User;
 import com.example.library_manager.model.enums.ReservationItemStatus;
 import com.example.library_manager.model.enums.ReservationStatus;
-import com.example.library_manager.repository.BookRepository;
 import com.example.library_manager.repository.LibrarianApproveRepository;
-import com.example.library_manager.repository.ReaderRepository;
-import com.example.library_manager.repository.ReservationItemRepository;
-import com.example.library_manager.repository.ReservationRepository;
-import com.example.library_manager.repository.UserRepository;
 
 @Service
 public class ReservationApprovalService {
 
     @Autowired
-    private ReservationRepository reservationRepository;
+    private ReservationService reservationService;
 
     @Autowired
-    private ReservationItemRepository reservationItemRepository;
+    private ReservationItemService reservationItemService;
 
     @Autowired
-    private ReaderRepository readerRepository;
+    private ReaderService readerService;
 
     @Autowired
-    private BookRepository bookRepository;
+    private BookService bookService;
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Autowired
     private LibrarianApproveRepository librarianApproveRepository;
@@ -51,8 +45,10 @@ public class ReservationApprovalService {
     public Reservation approveReservation(Integer reservationId, Integer librarianId, Boolean approved, String rejectReason) {
 
         // LẤY THÔNG TIN PHIẾU MƯỢN
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu mượn với ID: " + reservationId));
+        Reservation reservation = reservationService.getReservationById(reservationId);
+        if (reservation == null) {
+            throw new IllegalArgumentException("Không tìm thấy phiếu mượn với ID: " + reservationId);
+        }
 
         // Kiểm tra trạng thái phiếu mượn phải là PENDING
         if (reservation.getStatus() != ReservationStatus.PENDING) {
@@ -66,7 +62,7 @@ public class ReservationApprovalService {
         }
 
         // KIỂM TRA ĐỘC GIẢ CÒN HOẠT ĐỘNG KHÔNG
-        Reader reader = readerRepository.findById(reservation.getReaderId())
+        Reader reader = readerService.getReaderById(reservation.getReaderId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Không tìm thấy độc giả với ID: " + reservation.getReaderId()));
         // Kiểm tra độc giả hợp lệ
@@ -75,7 +71,7 @@ public class ReservationApprovalService {
         }
 
         // KIỂM TRA TỪNG SÁCH CÒN KHẢ DỤNG
-        List<ReservationItem> items = reservationItemRepository.findByReservationId(reservation.getId());
+        List<ReservationItem> items = reservationItemService.getReservationItemsByReservationId(reservation.getId());
 
         if (items.isEmpty()) {
             throw new IllegalArgumentException("Phiếu mượn không có sách nào");
@@ -84,7 +80,7 @@ public class ReservationApprovalService {
         // Kiểm tra từng sách
         StringBuilder unavailableBooks = new StringBuilder();
         for (ReservationItem item : items) {
-            Book book = bookRepository.findById(item.getBookId())
+            Book book = bookService.getBookById(item.getBookId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sách với ID: " + item.getBookId()));
 
             // Kiểm tra sách còn khả dụng không
@@ -106,7 +102,7 @@ public class ReservationApprovalService {
         reservation.setLibrarianApprovedId(librarianId);
 
         // Lưu thông tin
-        Reservation savedReservation = reservationRepository.save(reservation);
+        Reservation savedReservation = reservationService.saveReservation(reservation);
 
         // LƯU THÔNG TIN DUYỆT
         LibrarianApprove librarianApprove = new LibrarianApprove(librarianId, reservation.getId());
@@ -122,13 +118,13 @@ public class ReservationApprovalService {
         // Cập nhật trạng thái
         reservation.setStatus(ReservationStatus.REJECTED);
         reservation.setApprovalDate(new Date());
-        Reservation savedReservation = reservationRepository.save(reservation);
+        Reservation savedReservation = reservationService.saveReservation(reservation);
 
         // Cập nhật trạng thái các item
-        List<ReservationItem> items = reservationItemRepository.findByReservationId(reservation.getId());
+        List<ReservationItem> items = reservationItemService.getReservationItemsByReservationId(reservation.getId());
         for (ReservationItem item : items) {
             item.setStatus(ReservationItemStatus.EXPIRED);
-            reservationItemRepository.save(item);
+            reservationItemService.saveReservationItem(item);
         }
 
         return savedReservation;
@@ -144,17 +140,18 @@ public class ReservationApprovalService {
         ReservationStatus status = ReservationStatus.valueOf(statusString);
 
         // Lấy danh sách phiếu theo status
-        List<Reservation> reservations = reservationRepository.findByStatus(status);
+        List<Reservation> reservations = reservationService.getReservationsByStatus(status);
 
         List<Reservation> resultReservations = new ArrayList<>();
 
         // Kiểm tra và gán thông tin cho từng phiếu mượn
         for (Reservation reservation : reservations) {
             // Lấy items
-            List<ReservationItem> items = reservationItemRepository.findByReservationId(reservation.getId());
+            List<ReservationItem> items = reservationItemService.getReservationItemsByReservationId(reservation.getId());
 
             // Độc giả
-            Reader reader = readerRepository.findById(reservation.getReaderId()).orElse(null);
+            Reader reader = readerService.getReaderById(reservation.getReaderId())
+                    .orElse(null);
             
             // CHỈ KIỂM TRA VALID READER KHI STATUS LÀ PENDING
             if (status == ReservationStatus.PENDING) {
@@ -165,7 +162,7 @@ public class ReservationApprovalService {
             
             // Gán thông tin reader (không quan tâm valid hay không cho các status khác)
             if (reader != null) {
-                User user = userRepository.findById(reader.getUserId()).orElse(null);
+                User user = userService.getUserById(reader.getUserId()).orElse(null);
                 if (user != null) {
                     reader.setUsername(user.getUsername());
                     reader.setFullName(user.getFullName());
@@ -176,7 +173,7 @@ public class ReservationApprovalService {
 
             // Sách
             for (ReservationItem item : items) {
-                Book book = bookRepository.findById(item.getBookId()).orElse(null);
+                Book book = bookService.getBookById(item.getBookId()).orElse(null);
                 item.setBook(book);
             }
             reservation.setReservationItems(items);
@@ -184,33 +181,6 @@ public class ReservationApprovalService {
         }
 
         return resultReservations;
-    }
-
-    // LẤY TẤT CẢ PHIẾU MƯỢN (PENDING, APPROVED, REJECTED)
-    @Transactional
-    public List<Reservation> getAllReservations() {
-        // Tự động hủy các phiếu PENDING quá 3 ngày
-        expirePendingReservations();
-
-        // Lấy tất cả phiếu PENDING, APPROVED, REJECTED
-        List<ReservationStatus> statuses = Arrays.asList(
-            ReservationStatus.PENDING, 
-            ReservationStatus.APPROVED, 
-            ReservationStatus.REJECTED
-        );
-        
-        List<Reservation> allReservations = new ArrayList<>();
-        for (ReservationStatus status : statuses) {
-            allReservations.addAll(getReservationsByStatus(status.name()));
-        }
-        
-        return allReservations;
-    }
-
-    // LẤY DANH SÁCH PHIẾU MƯỢN CHỜ DUYỆT (Legacy method - giữ lại để tương thích)
-    @Transactional
-    public List<Reservation> getPendingReservations() {
-        return getReservationsByStatus("PENDING");
     }
 
     // TỰ ĐỘNG HỦY CÁC PHIẾU MƯỢN QUÁ HẠN (CHỈ PENDING QUÁ 3 NGÀY)
@@ -221,18 +191,17 @@ public class ReservationApprovalService {
         Date thresholdDate = calendar.getTime();
 
         // CHỈ LẤY CÁC PHIẾU PENDING CÓ requestDate < 3 ngày trước
-        List<Reservation> expiredReservations = reservationRepository
-            .findPendingExpiredReservations(thresholdDate);
+        List<Reservation> expiredReservations = reservationService.getPendingExpiredReservations(thresholdDate);
 
         for (Reservation reservation : expiredReservations) {
             reservation.setStatus(ReservationStatus.EXPIRED);
-            reservationRepository.save(reservation);
+            reservationService.saveReservation(reservation);
 
             // Cập nhật trạng thái items
-            List<ReservationItem> items = reservationItemRepository.findByReservationId(reservation.getId());
+            List<ReservationItem> items = reservationItemService.getReservationItemsByReservationId(reservation.getId());
             for (ReservationItem item : items) {
                 item.setStatus(ReservationItemStatus.EXPIRED);
-                reservationItemRepository.save(item);
+                reservationItemService.saveReservationItem(item);
             }
         }
 
@@ -245,16 +214,16 @@ public class ReservationApprovalService {
         // Tự động hủy các phiếu PENDING quá 3 ngày
         expirePendingReservations();
 
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu mượn với ID: " + reservationId));
+        Reservation reservation = reservationService.getReservationById(reservationId);
 
         // Kiểm tra và gán thông tin cho phiếu mượn
-        List<ReservationItem> items = reservationItemRepository.findByReservationId(reservation.getId());
+        List<ReservationItem> items = reservationItemService.getReservationItemsByReservationId(reservation.getId());
 
         // Độc giả - KHÔNG KIỂM TRA VALID
-        Reader reader = readerRepository.findById(reservation.getReaderId()).orElse(null);
+        Reader reader = readerService.getReaderById(reservation.getReaderId())
+                .orElse(null);
         if (reader != null) {
-            User user = userRepository.findById(reader.getUserId()).orElse(null);
+            User user = userService.getUserById(reader.getUserId()).orElse(null);
             if (user != null) {
                 reader.setUsername(user.getUsername());
                 reader.setFullName(user.getFullName());
@@ -265,17 +234,12 @@ public class ReservationApprovalService {
 
         // Sách
         for (ReservationItem item : items) {
-            Book book = bookRepository.findById(item.getBookId()).orElse(null);
+            Book book = bookService.getBookById(item.getBookId()).orElse(null);
             item.setBook(book);
         }
         reservation.setReservationItems(items);
 
         return reservation;
-    }
-
-    // LẤY CÁC SÁCH TRONG PHIẾU MƯỢN
-    public List<ReservationItem> getReservationItems(Integer reservationId) {
-        return reservationItemRepository.findByReservationId(reservationId);
     }
 
     // KIỂM TRA NGƯỜI DÙNG HỢP LỆ
@@ -285,7 +249,7 @@ public class ReservationApprovalService {
         }
         
         // Kiểm tra User của Reader
-        User user = userRepository.findById(reader.getUserId()).orElse(null);
+        User user = userService.getUserById(reader.getUserId()).orElse(null);
         if (user == null || user.getIsActive() != 1) {
             return false;
         }

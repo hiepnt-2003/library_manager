@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.library_manager.model.User;
-import com.example.library_manager.model.enums.UserType;
 import com.example.library_manager.repository.UserRepository;
 
 @Service

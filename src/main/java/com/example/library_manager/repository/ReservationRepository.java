@@ -26,10 +26,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Intege
     @Query("SELECT r FROM Reservation r WHERE r.status = 'PENDING' AND r.requestDate < :thresholdDate")
     List<Reservation> findPendingExpiredReservations(@Param("thresholdDate") Date thresholdDate);
     
-    // LẤY CÁC PHIẾU APPROVED QUÁ HẠN (approvalDate quá 3 ngày) - GIỮ LẠI ĐỂ TƯƠNG THÍCH
-    @Query("SELECT r FROM Reservation r WHERE r.status = 'APPROVED' AND r.approvalDate < :thresholdDate")
-    List<Reservation> findExpiredApprovedReservations(@Param("thresholdDate") Date thresholdDate);
-    
     // Đếm số phiếu mượn đang pending
     long countByStatus(ReservationStatus status);
 }

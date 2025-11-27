@@ -113,46 +113,7 @@ public class ReservationApprovalController {
                     .body(Map.of("success", false, "message", e.getMessage()));
         }
     }
-    
-    /**
-     * LẤY TẤT CẢ PHIẾU MƯỢN (CHỜ DUYỆT, ĐÃ DUYỆT, ĐÃ TỪ CHỐI)
-     * GET /api/reservations/all
-     * 
-     * Tự động kiểm tra và hủy các phiếu APPROVED quá 3 ngày
-     * Trả về tất cả phiếu PENDING, APPROVED, REJECTED
-     */
-    @GetMapping("/all")
-    public ResponseEntity<?> getAllReservations() {
-        try {
-            List<Reservation> allReservations = reservationApprovalService.getAllReservations();
-            return ResponseEntity.ok(allReservations);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
-    }
-    
-    /**
-     * LẤY DANH SÁCH PHIẾU MƯỢN CHỜ DUYỆT (Legacy - dùng GET /pending thay thế)
-     * GET /api/reservations/pending-list
-     * 
-     * Tự động kiểm tra và hủy các phiếu APPROVED quá 3 ngày
-     * Chỉ trả về các phiếu PENDING (không bao gồm phiếu đã quá hạn)
-     * Kiểm tra reader valid
-     * 
-     * @deprecated Sử dụng GET /api/reservations/pending thay thế
-     */
-    @GetMapping("/pending-list")
-    public ResponseEntity<?> getPendingReservations() {
-        try {
-            List<Reservation> pendingReservations = reservationApprovalService.getPendingReservations();
-            return ResponseEntity.ok(pendingReservations);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
-    }
-    
+
     /**
      * LẤY CHI TIẾT PHIẾU MƯỢN
      * GET /api/reservations/detail/{id}
@@ -165,21 +126,6 @@ public class ReservationApprovalController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("success", false, "message", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
-    }
-    
-    /**
-     * LẤY DANH SÁCH SÁCH TRONG PHIẾU MƯỢN
-     * GET /api/reservations/{id}/items
-     */
-    @GetMapping("/{id}/items")
-    public ResponseEntity<?> getReservationItems(@PathVariable Integer id) {
-        try {
-            List<ReservationItem> items = reservationApprovalService.getReservationItems(id);
-            return ResponseEntity.ok(items);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("success", false, "message", e.getMessage()));
