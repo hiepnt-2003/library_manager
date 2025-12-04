@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Manager - Hệ thống Quản lý Thư viện</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            padding: 50px 0;
+        }
+        
+        .hero-section {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+        
+        .hero-section h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .hero-section p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+        }
+        
+        .menu-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+            color: inherit;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .menu-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .menu-card h3 {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .menu-card p {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+        
+        .reader-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .reader-card:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+        
+        .reservation-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .reservation-card:hover {
+            background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+        }
+        
+        .menu-card.reader-card h3,
+        .menu-card.reader-card p,
+        .menu-card.reservation-card h3,
+        .menu-card.reservation-card p {
+            color: white;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            padding: 20px 0;
+        }
+        
+        .footer p {
+            margin: 0;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-section h1 {
+                font-size: 2rem;
+            }
+            
+            .hero-section p {
+                font-size: 1rem;
+            }
+            
+            .menu-card {
+                padding: 30px;
+            }
+            
+            .menu-icon {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-container">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <h1>
+                <i class="bi bi-book"></i>
+                Library Manager
+            </h1>
+            <p>Hệ thống Quản lý Thư viện Hiện đại</p>
+        </div>
+        
+        <!-- Menu Cards -->
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <a href="reader-manager.html" class="menu-card reader-card">
+                    <i class="bi bi-people-fill menu-icon"></i>
+                    <h3>Quản lý Độc giả</h3>
+                    <p>
+                        Thêm mới, chỉnh sửa và quản lý thông tin độc giả. 
+                        Theo dõi trạng thái thẻ thành viên.
+                    </p>
+                </a>
+            </div>
+            
+            <div class="col-md-5 col-lg-4">
+                <a href="reservation-approval.html" class="menu-card reservation-card">
+                    <i class="bi bi-clipboard-check menu-icon"></i>
+                    <h3>Duyệt Phiếu Mượn</h3>
+                    <p>
+                        Xem xét và phê duyệt các yêu cầu mượn sách từ độc giả. 
+                        Quản lý trạng thái phiếu mượn.
+                    </p>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                <i class="bi bi-c-circle"></i> 2024 Library Manager System. 
+                Made with <i class="bi bi-heart-fill text-danger"></i>
+            </p>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

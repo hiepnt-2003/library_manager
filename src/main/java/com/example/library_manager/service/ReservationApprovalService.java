@@ -42,7 +42,8 @@ public class ReservationApprovalService {
 
     // DUYỆT YÊU CẦU MƯỢN SÁCH
     @Transactional
-    public Reservation approveReservation(Integer reservationId, Integer librarianId, Boolean approved, String rejectReason) {
+    public Reservation approveReservation(Integer reservationId, Integer librarianId, Boolean approved,
+            String rejectReason) {
 
         // LẤY THÔNG TIN PHIẾU MƯỢN
         Reservation reservation = reservationService.getReservationById(reservationId);
@@ -147,19 +148,20 @@ public class ReservationApprovalService {
         // Kiểm tra và gán thông tin cho từng phiếu mượn
         for (Reservation reservation : reservations) {
             // Lấy items
-            List<ReservationItem> items = reservationItemService.getReservationItemsByReservationId(reservation.getId());
+            List<ReservationItem> items = reservationItemService
+                    .getReservationItemsByReservationId(reservation.getId());
 
             // Độc giả
             Reader reader = readerService.getReaderById(reservation.getReaderId())
                     .orElse(null);
-            
+
             // CHỈ KIỂM TRA VALID READER KHI STATUS LÀ PENDING
             if (status == ReservationStatus.PENDING) {
                 if (!isValidReader(reader)) {
                     continue; // Bỏ qua phiếu này nếu reader không valid
                 }
             }
-            
+
             // Gán thông tin reader (không quan tâm valid hay không cho các status khác)
             if (reader != null) {
                 User user = userService.getUserById(reader.getUserId()).orElse(null);
@@ -198,7 +200,8 @@ public class ReservationApprovalService {
             reservationService.saveReservation(reservation);
 
             // Cập nhật trạng thái items
-            List<ReservationItem> items = reservationItemService.getReservationItemsByReservationId(reservation.getId());
+            List<ReservationItem> items = reservationItemService
+                    .getReservationItemsByReservationId(reservation.getId());
             for (ReservationItem item : items) {
                 item.setStatus(ReservationItemStatus.EXPIRED);
                 reservationItemService.saveReservationItem(item);
@@ -247,7 +250,7 @@ public class ReservationApprovalService {
         if (reader == null) {
             return false;
         }
-        
+
         // Kiểm tra User của Reader
         User user = userService.getUserById(reader.getUserId()).orElse(null);
         if (user == null || user.getIsActive() != 1) {
@@ -259,7 +262,7 @@ public class ReservationApprovalService {
         if (reader.getMembershipExpiryDate() != null && reader.getMembershipExpiryDate().before(today)) {
             return false;
         }
-        
+
         return true;
     }
 }

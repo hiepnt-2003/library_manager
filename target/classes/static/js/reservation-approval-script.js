@@ -1,175 +1,140 @@
 // ============================================
-// RESERVATION APPROVAL - JAVASCRIPT (WITH TABS)
+// RESERVATION APPROVAL - REFACTORED JAVASCRIPT
 // ============================================
 
-// API Configuration
+// ============================================
+// 1. API CONFIGURATION
+// ============================================
 const API_BASE_URL = 'http://localhost:8080/api/reservations';
-const LIBRARIAN_ID = 1; // ID của nhân viên đang đăng nhập (thay đổi theo nhu cầu)
+const LIBRARIAN_ID = 1; // ID của nhân viên đang đăng nhập
 
-// Global Variables
+// ============================================
+// 2. GLOBAL STATE
+// ============================================
 let currentReservation = null;
 let allReservations = [];
-let currentTab = 'pending'; // pending, approved, rejected
+let currentTab = 'pending';
 
 // ============================================
-// INITIALIZATION
-// ============================================
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Reservation Approval System Initialized');
-    loadAllReservations();
-    setupTabListeners();
-});
-
-// ============================================
-// TAB MANAGEMENT
+// 3. API FUNCTIONS - Tách biệt các function gọi API
 // ============================================
 
 /**
- * Setup tab click listeners
+ * API: Lấy danh sách phiếu mượn theo status
  */
-function setupTabListeners() {
-    const tabs = document.querySelectorAll('[data-tab]');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            switchTab(this.getAttribute('data-tab'));
-        });
-    });
-}
-
-/**
- * Switch between tabs
- */
-function switchTab(tabName) {
-    currentTab = tabName;
-    
-    // Update active tab UI and ARIA attributes
-    document.querySelectorAll('[data-tab]').forEach(tab => {
-        const isActive = tab.getAttribute('data-tab') === tabName;
-        tab.classList.toggle('active', isActive);
-        tab.setAttribute('aria-selected', isActive);
-    });
-    
-    // Update panel's aria-labelledby to match active tab
-    const panel = document.getElementById('reservations-panel');
-    if (panel) {
-        panel.setAttribute('aria-labelledby', `${tabName}-tab`);
+async function apiGetReservationsByStatus(status) {
+    const response = await fetch(`${API_BASE_URL}/${status.toLowerCase()}`);
+    if (!response.ok) {
+        throw new Error(`Không thể tải danh sách phiếu mượn ${status}`);
     }
-    
-    // Filter and display reservations
-    filterAndDisplayReservations();
+    return await response.json();
 }
 
 /**
- * Filter by status when clicking on statistics
+ * API: Lấy chi tiết phiếu mượn
  */
-function filterByStatus(status) {
-    const tabMap = {
-        'PENDING': 'pending',
-        'APPROVED': 'approved',
-        'REJECTED': 'rejected',
-        'EXPIRED': 'expired'
+async function apiGetReservationDetail(reservationId) {
+    const response = await fetch(`${API_BASE_URL}/detail/${reservationId}`);
+    if (!response.ok) {
+        throw new Error('Không thể tải thông tin phiếu mượn');
+    }
+    return await response.json();
+}
+
+/**
+ * API: Duyệt hoặc từ chối phiếu mượn
+ */
+async function apiApproveReservation(reservationId, librarianId, approved, rejectReason = null) {
+    const requestData = {
+        reservationId: reservationId,
+        librarianId: librarianId,
+        approved: approved
     };
-    
-    const tab = tabMap[status];
-    if (tab) {
-        switchTab(tab);
+
+    if (!approved && rejectReason) {
+        requestData.rejectReason = rejectReason;
     }
+
+    const response = await fetch(`${API_BASE_URL}/approve`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Có lỗi xảy ra');
+    }
+
+    return result;
 }
 
 // ============================================
-// MAIN FUNCTIONS
+// 4. UI FUNCTIONS - Các function hiển thị
 // ============================================
 
 /**
- * Load all reservations from API
+ * Hiển thị loading state
  */
-async function loadAllReservations() {
-    try {
-        showLoading();
-        
-        // Gọi API để lấy 4 loại status
-        const [pendingRes, approvedRes, rejectedRes, expiredRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/pending`),
-            fetch(`${API_BASE_URL}/approved`),
-            fetch(`${API_BASE_URL}/rejected`),
-            fetch(`${API_BASE_URL}/expired`)
-        ]);
-        
-        if (!pendingRes.ok || !approvedRes.ok || !rejectedRes.ok || !expiredRes.ok) {
-            throw new Error('Không thể tải danh sách phiếu mượn');
-        }
-        
-        const pending = await pendingRes.json();
-        const approved = await approvedRes.json();
-        const rejected = await rejectedRes.json();
-        const expired = await expiredRes.json();
-        
-        // Gộp tất cả lại
-        allReservations = [...pending, ...approved, ...rejected, ...expired];
-        
-        console.log('Loaded reservations:', {
-            pending: pending.length,
-            approved: approved.length,
-            rejected: rejected.length,
-            expired: expired.length,
-            total: allReservations.length
-        });
-        
-        filterAndDisplayReservations();
-        updateStatistics();
-        
-    } catch (error) {
-        console.error('Error loading reservations:', error);
-        showAlert('Lỗi khi tải danh sách phiếu mượn: ' + error.message, 'danger');
-        showEmptyState();
-    }
+function showLoading() {
+    const tbody = document.getElementById('reservationsTableBody');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Đang tải dữ liệu...</p>
+            </td>
+        </tr>
+    `;
 }
 
 /**
- * Filter and display reservations based on current tab
+ * Hiển thị empty state
  */
-function filterAndDisplayReservations() {
-    let filteredReservations = [];
-    
-    switch(currentTab) {
-        case 'pending':
-            filteredReservations = allReservations.filter(r => r.status === 'PENDING');
-            break;
-        case 'approved':
-            filteredReservations = allReservations.filter(r => r.status === 'APPROVED');
-            break;
-        case 'rejected':
-            filteredReservations = allReservations.filter(r => r.status === 'REJECTED');
-            break;
-        case 'expired':
-            filteredReservations = allReservations.filter(r => r.status === 'EXPIRED');
-            break;
-    }
-    
-    displayReservations(filteredReservations);
+function showEmptyState() {
+    const tbody = document.getElementById('reservationsTableBody');
+    const messages = {
+        'pending': 'Không có phiếu mượn nào chờ duyệt',
+        'approved': 'Không có phiếu mượn nào đã duyệt (chờ độc giả nhận)',
+        'rejected': 'Không có phiếu mượn nào đã từ chối',
+        'expired': 'Không có phiếu mượn nào quá hạn nhận (quá 3 ngày không nhận)'
+    };
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center">
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <h5>${messages[currentTab]}</h5>
+                    <p>Danh sách trống</p>
+                </div>
+            </td>
+        </tr>
+    `;
 }
 
 /**
- * Display reservations in table
+ * Hiển thị danh sách phiếu mượn
  */
 function displayReservations(reservations) {
     const tbody = document.getElementById('reservationsTableBody');
-    
+
     if (reservations.length === 0) {
         showEmptyState();
         return;
     }
-    
+
     tbody.innerHTML = reservations.map(reservation => {
-        // Lấy thông tin độc giả từ reader object
         const readerName = reservation.reader ? reservation.reader.fullName : 'N/A';
         const readerPhone = reservation.reader ? reservation.reader.phone : '';
         const readerCardNumber = reservation.reader ? reservation.reader.libraryCardNumber : '';
         const bookCount = reservation.reservationItems ? reservation.reservationItems.length : 0;
-        
-        // Hiển thị thông tin khác nhau tùy theo tab
+
         let additionalInfo = '';
         if (currentTab === 'approved' && reservation.approvalDate) {
             additionalInfo = `
@@ -184,7 +149,7 @@ function displayReservations(reservations) {
                 </small>
             `;
         }
-        
+
         return `
         <tr onclick="viewReservationDetails(${reservation.id})" style="cursor: pointer;">
             <td data-label="ID"><strong>#${reservation.id}</strong></td>
@@ -235,35 +200,9 @@ function displayReservations(reservations) {
 }
 
 /**
- * View reservation details
- */
-async function viewReservationDetails(reservationId) {
-    try {
-        // Get reservation details using new endpoint
-        const response = await fetch(`${API_BASE_URL}/detail/${reservationId}`);
-        if (!response.ok) throw new Error('Không thể tải thông tin phiếu mượn');
-        
-        currentReservation = await response.json();
-        console.log('Current reservation:', currentReservation);
-        
-        // Display details (books đã có trong reservationItems)
-        displayReservationDetails(currentReservation);
-        
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('reservationModal'));
-        modal.show();
-        
-    } catch (error) {
-        console.error('Error viewing reservation:', error);
-        showAlert('Lỗi khi xem chi tiết phiếu mượn: ' + error.message, 'danger');
-    }
-}
-
-/**
- * Display reservation details in modal
+ * Hiển thị chi tiết phiếu mượn trong modal
  */
 function displayReservationDetails(reservation) {
-    // Thông tin độc giả
     const reader = reservation.reader || {};
     const readerInfo = `
         <div class="reader-info">
@@ -282,8 +221,7 @@ function displayReservationDetails(reservation) {
             </div>
         </div>
     `;
-    
-    // Thông tin phiếu mượn
+
     const reservationInfo = `
         <div class="card mb-3">
             <div class="card-body">
@@ -307,8 +245,7 @@ function displayReservationDetails(reservation) {
             </div>
         </div>
     `;
-    
-    // Danh sách sách
+
     const books = reservation.reservationItems || [];
     const booksHtml = books.map(item => {
         const book = item.book || {};
@@ -330,14 +267,13 @@ function displayReservationDetails(reservation) {
         </div>
         `;
     }).join('');
-    
+
     document.getElementById('reservationDetails').innerHTML = readerInfo + reservationInfo;
     document.getElementById('booksList').innerHTML = booksHtml || '<p class="text-muted">Không có sách nào</p>';
-    
-    // Hiển thị/ẩn nút duyệt/từ chối dựa vào trạng thái
+
     const approveBtn = document.getElementById('approveBtn');
     const rejectBtn = document.getElementById('rejectBtn');
-    
+
     if (reservation.status === 'PENDING') {
         approveBtn.style.display = 'inline-block';
         rejectBtn.style.display = 'inline-block';
@@ -347,146 +283,15 @@ function displayReservationDetails(reservation) {
     }
 }
 
-// ============================================
-// APPROVAL FUNCTIONS
-// ============================================
-
 /**
- * Quick approve from list
- */
-async function quickApprove(reservationId) {
-    if (!confirm('Bạn có chắc chắn muốn duyệt phiếu mượn này?')) {
-        return;
-    }
-    
-    await processApproval(reservationId, true, null);
-}
-
-/**
- * Quick reject from list
- */
-async function quickReject(reservationId) {
-    const reason = prompt('Nhập lý do từ chối:');
-    if (reason === null) return; // User cancelled
-    
-    if (!reason.trim()) {
-        showAlert('Vui lòng nhập lý do từ chối', 'warning');
-        return;
-    }
-    
-    await processApproval(reservationId, false, reason);
-}
-
-/**
- * Approve reservation from modal
- */
-async function approveReservation() {
-    if (!currentReservation) {
-        showAlert('Không tìm thấy thông tin phiếu mượn', 'danger');
-        return;
-    }
-    
-    if (!confirm('Bạn có chắc chắn muốn duyệt phiếu mượn này?')) {
-        return;
-    }
-    
-    await processApproval(currentReservation.id, true, null);
-    
-    // Close modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('reservationModal'));
-    if (modal) modal.hide();
-}
-
-/**
- * Show reject modal
- */
-function showRejectModal() {
-    const reservationModal = bootstrap.Modal.getInstance(document.getElementById('reservationModal'));
-    if (reservationModal) reservationModal.hide();
-    
-    document.getElementById('rejectReason').value = '';
-    
-    const rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
-    rejectModal.show();
-}
-
-/**
- * Reject reservation from modal
- */
-async function rejectReservation() {
-    if (!currentReservation) {
-        showAlert('Không tìm thấy thông tin phiếu mượn', 'danger');
-        return;
-    }
-    
-    const reason = document.getElementById('rejectReason').value.trim();
-    
-    if (!reason) {
-        showAlert('Vui lòng nhập lý do từ chối', 'warning');
-        return;
-    }
-    
-    await processApproval(currentReservation.id, false, reason);
-    
-    // Close modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
-    if (modal) modal.hide();
-}
-
-/**
- * Process approval/rejection
- */
-async function processApproval(reservationId, approved, rejectReason) {
-    try {
-        const requestData = {
-            reservationId: reservationId,
-            librarianId: LIBRARIAN_ID,
-            approved: approved
-        };
-        
-        if (!approved && rejectReason) {
-            requestData.rejectReason = rejectReason;
-        }
-        
-        console.log('Processing approval:', requestData);
-        
-        const response = await fetch(`${API_BASE_URL}/approve`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestData)
-        });
-        
-        const result = await response.json();
-        console.log('Approval result:', result);
-        
-        if (response.ok && result.success) {
-            showAlert(result.message, 'success');
-            loadAllReservations(); // Reload list
-        } else {
-            showAlert(result.message || 'Có lỗi xảy ra', 'danger');
-        }
-        
-    } catch (error) {
-        console.error('Error processing approval:', error);
-        showAlert('Lỗi khi xử lý phiếu mượn: ' + error.message, 'danger');
-    }
-}
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-/**
- * Update statistics
+ * Cập nhật thống kê
  */
 function updateStatistics() {
     const pending = allReservations.filter(r => r.status === 'PENDING').length;
     const approved = allReservations.filter(r => r.status === 'APPROVED').length;
     const rejected = allReservations.filter(r => r.status === 'REJECTED').length;
     const expired = allReservations.filter(r => r.status === 'EXPIRED').length;
-    
+
     document.getElementById('totalPending').textContent = pending;
     document.getElementById('totalApproved').textContent = approved;
     document.getElementById('totalRejected').textContent = rejected;
@@ -494,58 +299,262 @@ function updateStatistics() {
 }
 
 /**
- * Show loading state
+ * Hiển thị alert message
  */
-function showLoading() {
-    const tbody = document.getElementById('reservationsTableBody');
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="6" class="text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-2 text-muted">Đang tải dữ liệu...</p>
-            </td>
-        </tr>
+function showAlert(message, type = 'info') {
+    const alertContainer = document.getElementById('alertContainer');
+
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <i class="bi bi-${getAlertIcon(type)}"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     `;
+
+    alertContainer.innerHTML = alertHtml;
+
+    setTimeout(() => {
+        const alert = alertContainer.querySelector('.alert');
+        if (alert) {
+            alert.classList.remove('show');
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 300);
+        }
+    }, 5000);
+}
+
+// ============================================
+// 5. BUSINESS LOGIC FUNCTIONS
+// ============================================
+
+/**
+ * Load tất cả phiếu mượn
+ */
+async function loadAllReservations() {
+    try {
+        showLoading();
+
+        const [pending, approved, rejected, expired] = await Promise.all([
+            apiGetReservationsByStatus('PENDING'),
+            apiGetReservationsByStatus('APPROVED'),
+            apiGetReservationsByStatus('REJECTED'),
+            apiGetReservationsByStatus('EXPIRED')
+        ]);
+
+        allReservations = [...pending, ...approved, ...rejected, ...expired];
+
+        console.log('Loaded reservations:', {
+            pending: pending.length,
+            approved: approved.length,
+            rejected: rejected.length,
+            expired: expired.length,
+            total: allReservations.length
+        });
+
+        filterAndDisplayReservations();
+        updateStatistics();
+
+    } catch (error) {
+        console.error('Error loading reservations:', error);
+        showAlert('Lỗi khi tải danh sách phiếu mượn: ' + error.message, 'danger');
+        showEmptyState();
+    }
 }
 
 /**
- * Show empty state
+ * Filter và hiển thị phiếu mượn theo tab
  */
-function showEmptyState() {
-    const tbody = document.getElementById('reservationsTableBody');
-    const messages = {
-        'pending': 'Không có phiếu mượn nào chờ duyệt',
-        'approved': 'Không có phiếu mượn nào đã duyệt (chờ độc giả nhận)',
-        'rejected': 'Không có phiếu mượn nào đã từ chối',
-        'expired': 'Không có phiếu mượn nào quá hạn nhận (quá 3 ngày không nhận)'
-    };
-    
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="6" class="text-center">
-                <div class="empty-state">
-                    <i class="bi bi-inbox"></i>
-                    <h5>${messages[currentTab]}</h5>
-                    <p>Danh sách trống</p>
-                </div>
-            </td>
-        </tr>
-    `;
+function filterAndDisplayReservations() {
+    let filteredReservations = [];
+
+    switch (currentTab) {
+        case 'pending':
+            filteredReservations = allReservations.filter(r => r.status === 'PENDING');
+            break;
+        case 'approved':
+            filteredReservations = allReservations.filter(r => r.status === 'APPROVED');
+            break;
+        case 'rejected':
+            filteredReservations = allReservations.filter(r => r.status === 'REJECTED');
+            break;
+        case 'expired':
+            filteredReservations = allReservations.filter(r => r.status === 'EXPIRED');
+            break;
+    }
+
+    displayReservations(filteredReservations);
 }
+
+/**
+ * Chuyển tab
+ */
+function switchTab(tabName) {
+    currentTab = tabName;
+
+    document.querySelectorAll('[data-tab]').forEach(tab => {
+        const isActive = tab.getAttribute('data-tab') === tabName;
+        tab.classList.toggle('active', isActive);
+        tab.setAttribute('aria-selected', isActive);
+    });
+
+    const panel = document.getElementById('reservations-panel');
+    if (panel) {
+        panel.setAttribute('aria-labelledby', `${tabName}-tab`);
+    }
+
+    filterAndDisplayReservations();
+}
+
+/**
+ * Filter theo status khi click vào statistics
+ */
+function filterByStatus(status) {
+    const tabMap = {
+        'PENDING': 'pending',
+        'APPROVED': 'approved',
+        'REJECTED': 'rejected',
+        'EXPIRED': 'expired'
+    };
+
+    const tab = tabMap[status];
+    if (tab) {
+        switchTab(tab);
+    }
+}
+
+/**
+ * Xem chi tiết phiếu mượn
+ */
+async function viewReservationDetails(reservationId) {
+    try {
+        currentReservation = await apiGetReservationDetail(reservationId);
+        console.log('Current reservation:', currentReservation);
+
+        displayReservationDetails(currentReservation);
+
+        const modal = new bootstrap.Modal(document.getElementById('reservationModal'));
+        modal.show();
+
+    } catch (error) {
+        console.error('Error viewing reservation:', error);
+        showAlert('Lỗi khi xem chi tiết phiếu mượn: ' + error.message, 'danger');
+    }
+}
+
+/**
+ * Duyệt nhanh từ danh sách
+ */
+async function quickApprove(reservationId) {
+    if (!confirm('Bạn có chắc chắn muốn duyệt phiếu mượn này?')) {
+        return;
+    }
+
+    await processApproval(reservationId, true, null);
+}
+
+/**
+ * Từ chối nhanh từ danh sách
+ */
+async function quickReject(reservationId) {
+    const reason = prompt('Nhập lý do từ chối:');
+    if (reason === null) return;
+
+    if (!reason.trim()) {
+        showAlert('Vui lòng nhập lý do từ chối', 'warning');
+        return;
+    }
+
+    await processApproval(reservationId, false, reason);
+}
+
+/**
+ * Duyệt phiếu mượn từ modal
+ */
+async function approveReservation() {
+    if (!currentReservation) {
+        showAlert('Không tìm thấy thông tin phiếu mượn', 'danger');
+        return;
+    }
+
+    if (!confirm('Bạn có chắc chắn muốn duyệt phiếu mượn này?')) {
+        return;
+    }
+
+    await processApproval(currentReservation.id, true, null);
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('reservationModal'));
+    if (modal) modal.hide();
+}
+
+/**
+ * Hiển thị modal từ chối
+ */
+function showRejectModal() {
+    const reservationModal = bootstrap.Modal.getInstance(document.getElementById('reservationModal'));
+    if (reservationModal) reservationModal.hide();
+
+    document.getElementById('rejectReason').value = '';
+
+    const rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
+    rejectModal.show();
+}
+
+/**
+ * Từ chối phiếu mượn từ modal
+ */
+async function rejectReservation() {
+    if (!currentReservation) {
+        showAlert('Không tìm thấy thông tin phiếu mượn', 'danger');
+        return;
+    }
+
+    const reason = document.getElementById('rejectReason').value.trim();
+
+    if (!reason) {
+        showAlert('Vui lòng nhập lý do từ chối', 'warning');
+        return;
+    }
+
+    await processApproval(currentReservation.id, false, reason);
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
+    if (modal) modal.hide();
+}
+
+/**
+ * Xử lý approval/rejection
+ */
+async function processApproval(reservationId, approved, rejectReason) {
+    try {
+        const result = await apiApproveReservation(reservationId, LIBRARIAN_ID, approved, rejectReason);
+
+        console.log('Approval result:', result);
+        showAlert(result.message, 'success');
+        loadAllReservations();
+
+    } catch (error) {
+        console.error('Error processing approval:', error);
+        showAlert('Lỗi khi xử lý phiếu mượn: ' + error.message, 'danger');
+    }
+}
+
+// ============================================
+// 6. HELPER FUNCTIONS
+// ============================================
 
 /**
  * Format date to Vietnamese format
  */
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
-    
+
     const date = new Date(dateString);
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-    
+
     return `${day}/${month}/${year}`;
 }
 
@@ -567,35 +576,7 @@ function getStatusText(status) {
 }
 
 /**
- * Show alert message
- */
-function showAlert(message, type = 'info') {
-    const alertContainer = document.getElementById('alertContainer');
-    
-    const alertHtml = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            <i class="bi bi-${getAlertIcon(type)}"></i>
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-    
-    alertContainer.innerHTML = alertHtml;
-    
-    // Auto dismiss after 5 seconds
-    setTimeout(() => {
-        const alert = alertContainer.querySelector('.alert');
-        if (alert) {
-            alert.classList.remove('show');
-            setTimeout(() => {
-                alertContainer.innerHTML = '';
-            }, 300);
-        }
-    }, 5000);
-}
-
-/**
- * Get icon for alert type
+ * Get alert icon
  */
 function getAlertIcon(type) {
     const icons = {
@@ -608,33 +589,60 @@ function getAlertIcon(type) {
 }
 
 // ============================================
-// KEYBOARD SHORTCUTS (Optional)
+// 7. EVENT LISTENERS & INITIALIZATION
 // ============================================
 
-document.addEventListener('keydown', function(e) {
-    // Ctrl/Cmd + R: Refresh
-    if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
-        e.preventDefault();
-        loadAllReservations();
-    }
-    
-    // Tab switching with numbers
-    if (e.key === '1') switchTab('pending');
-    if (e.key === '2') switchTab('approved');
-    if (e.key === '3') switchTab('rejected');
-    if (e.key === '4') switchTab('expired');
+/**
+ * Setup tab listeners
+ */
+function setupTabListeners() {
+    const tabs = document.querySelectorAll('[data-tab]');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function () {
+            switchTab(this.getAttribute('data-tab'));
+        });
+    });
+}
+
+/**
+ * Setup keyboard shortcuts
+ */
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+            e.preventDefault();
+            loadAllReservations();
+        }
+
+        if (e.key === '1') switchTab('pending');
+        if (e.key === '2') switchTab('approved');
+        if (e.key === '3') switchTab('rejected');
+        if (e.key === '4') switchTab('expired');
+    });
+}
+
+/**
+ * Initialize on page load
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('Reservation Approval System Initialized');
+    console.log('API Base URL:', API_BASE_URL);
+    console.log('Librarian ID:', LIBRARIAN_ID);
+
+    loadAllReservations();
+    setupTabListeners();
+    setupKeyboardShortcuts();
 });
 
 // ============================================
-// CONSOLE HELPERS (Development)
+// 8. EXPORT FUNCTIONS (for HTML onclick)
 // ============================================
-
-console.log('API Base URL:', API_BASE_URL);
-console.log('Librarian ID:', LIBRARIAN_ID);
-console.log('Available functions:');
-console.log('- loadAllReservations()');
-console.log('- switchTab(tabName)');
-console.log('- filterByStatus(status)');
-console.log('- viewReservationDetails(id)');
-console.log('- quickApprove(id)');
-console.log('- quickReject(id)');
+window.loadAllReservations = loadAllReservations;
+window.switchTab = switchTab;
+window.filterByStatus = filterByStatus;
+window.viewReservationDetails = viewReservationDetails;
+window.quickApprove = quickApprove;
+window.quickReject = quickReject;
+window.approveReservation = approveReservation;
+window.showRejectModal = showRejectModal;
+window.rejectReservation = rejectReservation;
