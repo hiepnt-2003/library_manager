@@ -36,7 +36,7 @@ public class ReaderService {
                 // Nếu thẻ quá hạn thì isActive = 0 và lưu vào db user.isActive = 0
                 if (reader.getMembershipExpiryDate() != null
                         && reader.getMembershipExpiryDate().before(new java.util.Date())) {
-                    reader.setIsActive(0);
+                    // reader.setIsActive(0);
                     userService.disableUser(user.getId());
                 }
             });

@@ -23,20 +23,20 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ============================================
 -- 1. INSERT USERS
 -- ============================================
-INSERT INTO User (username, password, fullName, phone, isActive, createdAt, userType) VALUES
-('admin', 'admin123', 'Nguyễn Văn Admin', '0901234567', 1, NOW(), 'LIBRARIAN'),
-('librarian1', 'lib123', 'Trần Thị Thủy', '0902345678', 1, NOW(), 'LIBRARIAN'),
-('librarian2', 'lib123', 'Lê Văn Tùng', '0903456789', 1, NOW(), 'LIBRARIAN'),
-('reader1', 'reader123', 'Phạm Minh Anh', '0904567890', 1, NOW(), 'READER'),
-('reader2', 'reader123', 'Hoàng Thị Bích', '0905678901', 1, NOW(), 'READER'),
-('reader3', 'reader123', 'Đỗ Văn Cường', '0906789012', 1, NOW(), 'READER'),
-('reader4', 'reader123', 'Vũ Thị Diệu', '0907890123', 1, NOW(), 'READER'),
-('reader5', 'reader123', 'Bùi Văn Em', '0908901234', 1, NOW(), 'READER'),
-('reader6', 'reader123', 'Ngô Thị Phương', '0909012345', 1, NOW(), 'READER'),
-('reader7', 'reader123', 'Đinh Văn Giang', '0900123456', 1, NOW(), 'READER'),
-('reader8', 'reader123', 'Mai Thị Hoa', '0911234567', 1, NOW(), 'READER'),
-('reader9', 'reader123', 'Lý Văn Hùng', '0912345678', 1, NOW(), 'READER'),
-('reader10', 'reader123', 'Trương Thị Lan', '0913456789', 1, NOW(), 'READER');
+INSERT INTO User (username, password, fullName, phone, isActive, userType) VALUES
+('admin', 'admin123', 'Nguyễn Văn Admin', '0901234567', 1, 'LIBRARIAN'),
+('librarian1', 'lib123', 'Trần Thị Thủy', '0902345678', 1, 'LIBRARIAN'),
+('librarian2', 'lib123', 'Lê Văn Tùng', '0903456789', 1, 'LIBRARIAN'),
+('reader1', 'reader123', 'Phạm Minh Anh', '0904567890', 1, 'READER'),
+('reader2', 'reader123', 'Hoàng Thị Bích', '0905678901', 1, 'READER'),
+('reader3', 'reader123', 'Đỗ Văn Cường', '0906789012', 1, 'READER'),
+('reader4', 'reader123', 'Vũ Thị Diệu', '0907890123', 1, 'READER'),
+('reader5', 'reader123', 'Bùi Văn Em', '0908901234', 1, 'READER'),
+('reader6', 'reader123', 'Ngô Thị Phương', '0909012345', 1, 'READER'),
+('reader7', 'reader123', 'Đinh Văn Giang', '0900123456', 1, 'READER'),
+('reader8', 'reader123', 'Mai Thị Hoa', '0911234567', 1, 'READER'),
+('reader9', 'reader123', 'Lý Văn Hùng', '0912345678', 1, 'READER'),
+('reader10', 'reader123', 'Trương Thị Lan', '0913456789', 1, 'READER');
 
 -- ============================================
 -- 2. INSERT LIBRARIANS
@@ -50,17 +50,16 @@ INSERT INTO Librarian (employeeId, userId, role, hireDate, department) VALUES
 -- 3. INSERT READERS
 -- ============================================
 INSERT INTO Reader (libraryCardNumber, userId, dateJoined, membershipExpiryDate) VALUES
-('LIB2024001', 4, '2024-01-15', '2025-01-15'),
-('LIB2024002', 5, '2024-02-20', '2025-02-20'),
-('LIB2024003', 6, '2024-03-10', '2025-03-10'),
-('LIB2024004', 7, '2024-04-05', '2025-04-05'),
-('LIB2024005', 8, '2024-05-12', '2025-05-12'),
-('LIB2024006', 9, '2024-06-18', '2025-06-18'),
-('LIB2024007', 10, '2024-07-22', '2025-07-22'),
-('LIB2024008', 11, '2024-08-30', '2025-08-30'),
-('LIB2024009', 12, '2024-09-15', '2025-09-15'),
-('LIB2024010', 13, '2024-10-01', '2025-10-01');
-
+('LIB1', 4, '2024-01-15', '2026-01-15'),
+('LIB2', 5, '2024-02-20', '2026-02-20'),
+('LIB3', 6, '2024-03-10', '2025-03-10'),
+('LIB4', 7, '2024-04-05', '2026-04-05'),
+('LIB5', 8, '2024-05-12', '2025-05-12'),
+('LIB6', 9, '2024-06-18', '2026-06-18'),
+('LIB7', 10, '2024-07-22', '2026-07-22'),
+('LIB8', 11, '2024-08-30', '2025-08-30'),
+('LIB9', 12, '2024-09-15', '2026-09-15'),
+('LIB10', 13, '2024-10-01', '2026-10-01');
 -- ============================================
 -- 4. INSERT CATEGORIES
 -- ============================================
@@ -166,21 +165,21 @@ INSERT INTO Reservation (readerId, librarianApprovedId, librarianGiveId, librari
 (3, 2, 2, 1, '2024-10-10', '2024-10-11', '2024-10-25', '2024-10-10', 'COMPLETED'),
 
 -- Đang mượn
-(4, 1, 1, NULL, '2024-11-01', '2024-11-02', '2024-11-16', '2024-11-01', 'BORROWED'),
-(5, 2, 2, NULL, '2024-11-05', '2024-11-06', '2024-11-20', '2024-11-05', 'BORROWED'),
-(6, 1, 1, NULL, '2024-11-10', '2024-11-11', '2024-11-25', '2024-11-10', 'BORROWED'),
+(4, 1, 1, NULL, '2024-11-20', '2024-11-21', '2024-12-05', '2024-11-20', 'BORROWED'),
+(5, 2, 2, NULL, '2024-11-25', '2024-11-26', '2024-12-10', '2024-11-25', 'BORROWED'),
+(6, 1, 1, NULL, '2024-11-28', '2024-11-29', '2024-12-13', '2024-11-28', 'BORROWED'),
 
 -- Quá hạn
 (7, 2, 2, NULL, '2024-10-15', '2024-10-16', '2024-10-30', '2024-10-15', 'OVERDUE'),
 (8, 1, 1, NULL, '2024-10-20', '2024-10-21', '2024-11-04', '2024-10-20', 'OVERDUE'),
 
--- Đang chờ duyệt
-(9, NULL, NULL, NULL, '2024-11-23', NULL, '2025-12-04', NULL, 'PENDING'),
-(10, NULL, NULL, NULL, '2024-11-24', NULL, '2025-12-04', NULL, 'PENDING'),
+-- Đang chờ duyệt (requestDate trong 2 ngày gần đây để không bị tự động EXPIRED)
+(9, NULL, NULL, NULL, CURDATE(), NULL, NULL, NULL, 'PENDING'),
+(10, NULL, NULL, NULL, CURDATE(), NULL, NULL, NULL, 'PENDING'),
 
--- Đã duyệt, chờ lấy sách
-(1, 1, NULL, NULL, '2024-11-22', NULL, NULL, '2024-11-22', 'APPROVED'),
-(2, 2, NULL, NULL, '2024-11-23', NULL, NULL, '2024-11-23', 'APPROVED');
+-- Đã duyệt, chờ lấy sách (approvalDate trong vòng 3 ngày, chưa có pickupDate, chưa có dueDate)
+(11, 1, NULL, NULL, '2024-12-02', NULL, NULL, '2024-12-02', 'APPROVED'),
+(12, 2, NULL, NULL, '2024-12-03', NULL, NULL, '2024-12-03', 'APPROVED');
 
 -- ============================================
 -- 9. INSERT RESERVATION ITEMS
