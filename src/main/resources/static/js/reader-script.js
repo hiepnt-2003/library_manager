@@ -156,8 +156,12 @@ function displayReaders(readers) {
         return;
     }
 
-    tbody.innerHTML = readers.map(reader => `
-        <tr>
+     tbody.innerHTML = readers.map((reader, index) => {
+        const nextIndex = (index + 1) % readers.length;
+        const nextReaderId = readers[nextIndex].id;//${nextReaderId}
+        
+
+        return `
             <td><strong>#${reader.id}</strong></td>
             <td>
                 <i class="bi bi-credit-card text-primary"></i>
@@ -186,8 +190,8 @@ function displayReaders(readers) {
                     ` : ''}
                 </div>
             </td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
 }
 
 /**
